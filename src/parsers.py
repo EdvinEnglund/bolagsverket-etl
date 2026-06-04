@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import pandas as pd
-from etl import get_token, get_latest_report, get_bv_data
+from fetchers import get_token, get_latest_report, get_bv_data
 
 def parse_report(xml_string):
     result = {}

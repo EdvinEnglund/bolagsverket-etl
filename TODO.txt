@@ -1,0 +1,31 @@
+00. Must fix duplicate columns!!! quick-fix: no period2-4 or balans2-4, only 0-1.
+    OR: Make ex. Nettoomsattning_PREIOD0 and Nettoomsattning1_PERIOD1
+
+0. Make numerical report data float or even int
+    - probably in parse_report
+    - remove spaces/dots from all strings
+1. Create new git repo
+2. Create 3 files:
+    Create modified versions of chat suggestion:
+    - fetchers.py (including unzipping and get latest report)
+    - parsers.py
+    - pipeline.py (mostly get_merged_data)
+
+3. Test 60+ companies to see rate limit behaviour
+
+4. Create logic for token reset after 1 hour (in pipeline)
+
+5. Rate limit throttle?
+
+6. Create logic to handle mid-pipeline crashes, create temporary .txt or .csv or.parquet? in ./data/tmp
+
+7. Make async branch and compare runtime for ca 100-500 companies.
+
+8. Gather ca 1000 projects. Truncate columns where +80% of rows are missing (notebook)
+
+9. Incorporate results from notebook into final pipeline
+
+9. Add revisorsberättelse fetcher, parser and pipeline
+    - Check if possible to deduce revisorsanmärkning -> add column to main dataframe
+
+10. make ML ready preprocessing w. missing values
