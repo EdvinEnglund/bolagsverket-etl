@@ -1,11 +1,7 @@
 00. Must fix duplicate columns!!! quick-fix: no period2-4 or balans2-4, only 0-1.
     OR: Make ex. Nettoomsattning_PREIOD0 and Nettoomsattning1_PERIOD1
 
-0. Make numerical report data float or even int
-    - probably in parse_report
-    - remove spaces/dots from all strings
-1. Create new git repo
-2. Create 3 files:
+1. Create 3 files:
     Create modified versions of chat suggestion:
     - fetchers.py (including unzipping and get latest report)
     - parsers.py

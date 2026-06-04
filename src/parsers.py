@@ -18,7 +18,9 @@ def parse_report(xml_string):
             start_index = len("se-gen-base:")
             key = f"{name[start_index::]}_{ctx.upper()}"
 
-            value = tag.get_text(strip=True)
+            value_string = tag.get_text(strip=True)
+            value = float(value_string.replace(" ", ""))
+
             result[key] = value
 
     except:
