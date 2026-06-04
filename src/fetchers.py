@@ -74,16 +74,24 @@ def unzip_documents(zip_bytes):
                     xml_files.append(f.read().decode("utf-8"))
     return xml_files
 
-def save_report_file(report, org_no, path = None):
+def save_report_file(report, org_no):
     if len(report) == 0:
         print("No report to save")
         return ""
-    if path is None:
-        path = Path(__file__).resolve().parent
-    save_path = path/ f"{org_no}_report.xml"
+
+
+    project_root = Path(__file__).resolve().parent.parent
+
+    save_dir = project_root / "data" / "example-xmls"
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    save_path = save_dir / f"{org_no}_report.xml"
+
     with open(save_path, "w", encoding="utf-8") as f:
         f.write(report)
+
     print(f"Saved XML report to: {save_path}")
+    return save_path
 
 def get_latest_report(token, org_no):
     try:

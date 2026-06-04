@@ -3,6 +3,8 @@ from fetchers import get_token, get_latest_report, get_bv_data
 from parsers import parse_report, parse_bv_data
 import pandas as pd
 
+from src.fetchers import save_report_file
+
 def run_main_pipeline(org_nos):
     #ADD TOKEN REGENERATOR LOGIC HERE
     token = get_token()
@@ -38,9 +40,14 @@ if __name__ == "__main__":
     token = get_token()
 
     report = get_latest_report(token, org_no)
+    save_report_file(report, org_no)
     parsed_report = parse_report(report)
+
+
+    output = run_main_pipeline(org_nos)
 
     for key, value in parsed_report.items():
         print(f"{key}:      {value}")
 
+    print(output.head())
 
