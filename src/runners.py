@@ -34,7 +34,8 @@ if __name__ == "__main__":
               "5565540035",
               "5566086483",
               "5590892542",
-              "5564363421"] # index example number
+              "5564363421",
+              "5592565096"] # index example number
 
     org_no = org_nos[0]
     token = get_token()
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     save_report_file(report, org_no)
     parsed_report = parse_report(report)
 
-
+"""
     output = run_main_pipeline(org_nos)
 
     for key, value in parsed_report.items():
@@ -51,3 +52,4 @@ if __name__ == "__main__":
 
     print(output.head())
 
+"""

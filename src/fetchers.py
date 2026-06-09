@@ -75,23 +75,28 @@ def unzip_documents(zip_bytes):
     return xml_files
 
 def save_report_file(report, org_no):
-    if len(report) == 0:
-        print("No report to save")
-        return ""
 
+    try:
+        if len(report) == 0:
+            print("No report to save")
+            return ""
 
-    project_root = Path(__file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parent.parent
 
-    save_dir = project_root / "data" / "example-xmls"
-    save_dir.mkdir(parents=True, exist_ok=True)
+        save_dir = project_root / "data" / "example-xmls"
+        save_dir.mkdir(parents=True, exist_ok=True)
 
-    save_path = save_dir / f"{org_no}_report.xml"
+        save_path = save_dir / f"{org_no}_report.xml"
 
-    with open(save_path, "w", encoding="utf-8") as f:
-        f.write(report)
+        with open(save_path, "w", encoding="utf-8") as f:
+            f.write(report)
 
-    print(f"Saved XML report to: {save_path}")
-    return save_path
+        print(f"Saved XML report to: {save_path}")
+
+    except:
+        print("Couldn't save report")
+    return
+
 
 def get_latest_report(token, org_no):
     try:
@@ -104,12 +109,13 @@ def get_latest_report(token, org_no):
         print(f"No documents to download for {org_no}")
         return None
 
-    doc_id = document_list[0]["dokumentId"]
+    doc_id = document_list[-1]["dokumentId"]
     zip_bytes = get_doc_zip_bytes(token = token, doc_id= doc_id)
     documents = unzip_documents(zip_bytes)
     if len(documents) == 0:
         print(f"No documents found for {org_no}")
         return None
+    # first index is annual report, second is revisionsberättelse (accountant statement)
     return documents[0]
 
 
