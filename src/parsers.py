@@ -1,6 +1,5 @@
 from bs4 import BeautifulSoup
 import pandas as pd
-from fetchers import get_token, get_latest_report, get_bv_data, save_report_file
 
 def parse_report(xml_string):
     result = {}
@@ -36,20 +35,6 @@ def parse_report(xml_string):
 
     return result
 
-def parse_reports(token, org_nos):
-    rows = []
-
-    for org_no in org_nos:
-        report = get_latest_report(token, org_no)
-        if not report:
-            continue
-        row = parse_report(report)
-        rows.append(row)
-
-    if len(rows) == 0:
-        return pd.DataFrame()
-
-    return pd.DataFrame(rows)
 
 def parse_bv_data(company_info):
     org = company_info["organisationer"][0]
