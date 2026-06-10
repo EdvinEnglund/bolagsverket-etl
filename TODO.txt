@@ -1,7 +1,10 @@
 ### FOR FEATURE BRANCH ###
 1. Create save functions for saving to csv or move parquets to OUTPUT_DIR. Theese should clear the /tmp dir
+
 2. Move helpers from runners to utils
+
 3. Incorporate save functions into main pipeline
+
 ##########################
 
 3. Test 60+ companies to see rate limit behaviour
