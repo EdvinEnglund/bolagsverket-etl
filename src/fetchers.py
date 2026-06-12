@@ -4,6 +4,23 @@ import os
 import uuid
 import zipfile
 import io
+import time
+from config import MIN_INTERVAL
+
+
+# Global rate limit variable
+_last_call = 0
+
+# ---------------- RATE LIMIT ----------------
+def rate_limit():
+    global _last_call
+    now = time.time()
+    wait = MIN_INTERVAL - (now - _last_call)
+
+    if wait > 0:
+        time.sleep(wait)
+
+    _last_call = time.time()
 
 # API Functions
 def get_token():
@@ -24,6 +41,7 @@ def get_token():
     return response["access_token"]
 
 def get_bv_data(token, org_no):
+    rate_limit()
     url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/organisationer"
     request_id = str(uuid.uuid4())
     headers = {
@@ -41,6 +59,7 @@ def get_bv_data(token, org_no):
     return response.json()
 
 def get_doc_list(token, org_no):
+    rate_limit()
     url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokumentlista"
     request_id = str(uuid.uuid4())
     headers = {
@@ -63,6 +82,7 @@ def get_doc_list(token, org_no):
     return doc_list
 
 def get_doc_zip_bytes(token, doc_id):
+    rate_limit()
     url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokument/{doc_id}"
 
     headers = {
@@ -103,11 +123,24 @@ def get_latest_report(token, org_no):
     # first index is annual report, second is revisionsberättelse (accountant statement)
     return documents[0]
 
+###############################################
+### Test rate limiting/throttling behaviour ###
+###############################################
+
+def rate_maxxer(token, org_no):
+    t = time.time()
+    for i in range(300):
+        _ = get_doc_list(token, org_no)
+        print(f"Run {i}")
+    print(f"Total time: {time.time() - t}")
+    return
+
 
 if __name__ == "__main__":
     org_no = "5566086483"
     token = get_token()
 
-    report = get_latest_report(token, org_no)
+    #report = get_latest_report(token, org_no)
 
     #save_report_file(report, org_no = org_no)
+    rate_maxxer(token, org_no)

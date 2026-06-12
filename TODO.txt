@@ -1,14 +1,13 @@
 1. Write simple test to max rate limit ~300 of the same call in a loop
+=> Must implement a rate limiter...
 
-3. Test 60+ companies to see rate limit behaviour - is it a problem?
+2. Test main pipeline w. rate-limiter, Benchmark: ca 350-390s.
 
 4. Create logic for token reset after 1 hour (in pipeline)
 
-5. Rate limit (?) - compare to without
-
 7. Make async branch and compare runtime for ca 100-500 companies.
 
-8. Gather ca 1000 projects. Truncate columns where +80% of rows are missing (notebook)
+8. Gather ca 1000 orgs. Truncate columns where +80% of rows are missing (notebook)
 
 9. Incorporate results from notebook into final pipeline
 

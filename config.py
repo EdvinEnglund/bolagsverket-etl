@@ -1,4 +1,4 @@
-MIN_INTERVAL = 0.2          # rate limit between calls
+MIN_INTERVAL = 1
 MAX_RETRIES = 5
 BATCH_SIZE = 5
 DONE_FILE_DIR = "data/tmp/done"
