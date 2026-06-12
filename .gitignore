@@ -9,3 +9,4 @@ __pycache__/
 data/example-xmls/*
 data/tmp/*
 data/output/*
+data/example-csvs/
