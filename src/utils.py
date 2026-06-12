@@ -1,3 +1,4 @@
+from idlelib.colorizer import prog_group_name_to_tag
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -37,14 +38,17 @@ def load_done():
     except FileNotFoundError:
         return set()
 
-def mark_done(org_no):
+def mark_done(org_nos):
     project_root = Path(__file__).resolve().parent.parent
     save_dir = project_root / DONE_FILE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     save_file = save_dir / "done.txt"
-    with open(save_file, "a") as f:
-        f.write(str(org_no) + "\n")
+
+    for org_no in org_nos:
+        with open(save_file, "a") as f:
+            f.write(str(org_no) + "\n")
     return
+
 
 def dump_parquet_batch(rows):
     project_root = Path(__file__).resolve().parent.parent
@@ -103,6 +107,36 @@ def save_result(df, path = None, output_format = "parquet"):
         return
     print("Could not save result: format must be 'parquet' or 'csv'")
     return
+
+
+#######################################################################################
+# Utility function to extract org. numbers from csv's downloaded from bolagsfilter.se #
+#######################################################################################
+
+def extract_orgnrs():
+    project_root = Path(__file__).resolve().parent.parent
+    data_dir = Path("data/example_csvs")
+
+    example_list = []
+
+    for i in range(1, 7):
+        file_path = project_root / data_dir / f"screener_sida{i}.csv"
+        df = pd.read_csv(file_path)
+
+        if "org_nr" in df.columns:
+            example_list.extend(df["org_nr"].dropna().tolist())
+
+    for i in range(len(example_list)):
+        example_list[i] = str(example_list[i])
+
+    print(example_list)
+
+
+
+if __name__ == "__main__":
+    extract_orgnrs()
+
+
 
 
 

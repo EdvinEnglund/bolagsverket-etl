@@ -1,3 +1,5 @@
+1. Write simple test to max rate limit ~300 of the same call in a loop
+
 3. Test 60+ companies to see rate limit behaviour - is it a problem?
 
 4. Create logic for token reset after 1 hour (in pipeline)
