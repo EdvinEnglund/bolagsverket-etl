@@ -1,3 +1,7 @@
+#####################
+ASYNC BRANCH
+#####################
+
 2. Test main pipeline w. rate-limiter, Benchmark: ca 350-390s.
 => 520s.... not good. Maybe set limit at 120/minute and implement retry logic...
 
