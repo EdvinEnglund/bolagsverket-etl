@@ -1,7 +1,9 @@
-1. Write simple test to max rate limit ~300 of the same call in a loop
-=> Must implement a rate limiter...
-
 2. Test main pipeline w. rate-limiter, Benchmark: ca 350-390s.
+=> 520s.... not good. Maybe set limit at 120/minute and implement retry logic...
+
+3. Test if rate limit is per token => run fetcher test in two terminals
+    => if fails at the same time, no. else: PARALLELIZE
+    => not per token... sppedup is limited :(
 
 4. Create logic for token reset after 1 hour (in pipeline)
 

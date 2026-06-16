@@ -5,7 +5,8 @@ import uuid
 import zipfile
 import io
 import time
-from config import MIN_INTERVAL
+from src.config import MIN_INTERVAL
+from datetime import datetime
 
 
 # Global rate limit variable
@@ -41,7 +42,7 @@ def get_token():
     return response["access_token"]
 
 def get_bv_data(token, org_no):
-    rate_limit()
+    #rate_limit()
     url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/organisationer"
     request_id = str(uuid.uuid4())
     headers = {
@@ -59,7 +60,7 @@ def get_bv_data(token, org_no):
     return response.json()
 
 def get_doc_list(token, org_no):
-    rate_limit()
+    #rate_limit()
     url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokumentlista"
     request_id = str(uuid.uuid4())
     headers = {
@@ -82,7 +83,7 @@ def get_doc_list(token, org_no):
     return doc_list
 
 def get_doc_zip_bytes(token, doc_id):
-    rate_limit()
+    #rate_limit()
     url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokument/{doc_id}"
 
     headers = {
@@ -90,22 +91,34 @@ def get_doc_zip_bytes(token, doc_id):
         "X-Request-Id": str(uuid.uuid4()),
         "Authorization": f"Bearer {token}"
     }
+    try:
+        response = requests.get(url, headers=headers)
 
-    response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"Http Error: Get doc zip status: {response.status_code}")
+            return None
 
-    if response.status_code != 200:
-        print(f"Http Error: Get token status: {response.status_code}")
+        return response.content
 
-    response.raise_for_status()
-    return response.content
+    except:
+        print(f"Couldn't get doc zip for doc.id {doc_id}")
+
+    return None
+
+
 
 def unzip_documents(zip_bytes):
     xml_files = []
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
-        for name in z.namelist():
-            if name.endswith(".xml") or name.endswith(".xhtml"):
-                with z.open(name) as f:
-                    xml_files.append(f.read().decode("utf-8"))
+    if zip_bytes is None:
+        return xml_files
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+            for name in z.namelist():
+                if name.endswith(".xml") or name.endswith(".xhtml"):
+                    with z.open(name) as f:
+                        xml_files.append(f.read().decode("utf-8"))
+    except Exception as e:
+        print(f"Couldn't unzip documents: {e}")
     return xml_files
 
 def get_latest_report(token, org_no):
@@ -129,9 +142,13 @@ def get_latest_report(token, org_no):
 
 def rate_maxxer(token, org_no):
     t = time.time()
-    for i in range(300):
+    for i in range(150):
+        print(f"call {i} a, time elapsed: {(time.time() - t):.2f} seconds, T: {datetime.now()}")
         _ = get_doc_list(token, org_no)
-        print(f"Run {i}")
+
+        #print(f"call {i} b, time elapsed: {(time.time() - t):.2f} seconds")
+        #__ = get_bv_data(token, org_no)
+
     print(f"Total time: {time.time() - t}")
     return
 

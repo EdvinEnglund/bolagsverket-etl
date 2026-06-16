@@ -1,9 +1,9 @@
 MIN_INTERVAL = 1
 MAX_RETRIES = 5
 BATCH_SIZE = 5
-DONE_FILE_DIR = "data/tmp/done"
-PARQUET_DATA_DIR = "data/tmp/parquet_batches"
-DEFAULT_OUTPUT_DIR = "data/output/"
+DONE_FILE_DIR = "../data/tmp/done"
+PARQUET_DATA_DIR = "../data/tmp/parquet_batches"
+DEFAULT_OUTPUT_DIR = "../data/output/"
 
 EXAMPLE_ORGS = ["5568808686",
                "5568649478",

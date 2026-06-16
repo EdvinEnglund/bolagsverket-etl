@@ -37,38 +37,43 @@ def parse_report(xml_string):
 
 
 def parse_bv_data(company_info):
-    org = company_info["organisationer"][0]
+    try:
+        org = company_info["organisationer"][0]
 
-    result = {
-        "org_no": org["organisationsidentitet"]["identitetsbeteckning"],
-        "name": org["organisationsnamn"]["organisationsnamnLista"][0]["namn"],
-        "registration_date": org["organisationsdatum"]["registreringsdatum"],
-        "avregistreradOrganisation": org.get("avregistreradOrganisation"),
-        "avregistreringsorsak": org.get("avregistreringsorsak"),
-        "pagaendeAvvecklingsEllerOmstruktureringsforfarande": org.get(
-            "pagaendeAvvecklingsEllerOmstruktureringsforfarande"
-        ),
-        "postnummer": (
-            org.get("postadressOrganisation", {})
-               .get("postadress", {})
-               .get("postnummer")
-        ),
-        "beskrivning": (
-            org.get("verksamhetsbeskrivning", {})
-               .get("beskrivning")
-        ),
-    }
+        result = {
+            "org_no": org["organisationsidentitet"]["identitetsbeteckning"],
+            "name": org["organisationsnamn"]["organisationsnamnLista"][0]["namn"],
+            "registration_date": org["organisationsdatum"]["registreringsdatum"],
+            "avregistreradOrganisation": org.get("avregistreradOrganisation"),
+            "avregistreringsorsak": org.get("avregistreringsorsak"),
+            "pagaendeAvvecklingsEllerOmstruktureringsforfarande": org.get(
+                "pagaendeAvvecklingsEllerOmstruktureringsforfarande"
+            ),
+            "postnummer": (
+                org.get("postadressOrganisation", {})
+                   .get("postadress", {})
+                   .get("postnummer")
+            ),
+            "beskrivning": (
+                org.get("verksamhetsbeskrivning", {})
+                   .get("beskrivning")
+            ),
+        }
 
-    sni_codes = [
-        sni["kod"].strip()
-        for sni in org["naringsgrenOrganisation"]["sni"]
-        if sni["kod"].strip()
-    ]
+        sni_codes = [
+            sni["kod"].strip()
+            for sni in org["naringsgrenOrganisation"]["sni"]
+            if sni["kod"].strip()
+        ]
 
-    for i in range(4):
-        result[f"SNI{i}"] = sni_codes[i] if i < len(sni_codes) else None
+        for i in range(4):
+            result[f"SNI{i}"] = sni_codes[i] if i < len(sni_codes) else None
+        return result
 
-    return result
+    except Exception as e:
+        print(f"Could not parse org info: {e}")
+        return {}
+
 
 if __name__ == "__main__":
     pd.set_option('display.max_rows', None)
