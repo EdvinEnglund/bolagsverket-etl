@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 import uuid
 import shutil
-from src.config import DONE_FILE_DIR, PARQUET_DATA_DIR, DEFAULT_OUTPUT_DIR
+from src.config.config import DONE_FILE_DIR, PARQUET_DATA_DIR, DEFAULT_OUTPUT_DIR
 
 def save_report_file(report, org_no):
     try:

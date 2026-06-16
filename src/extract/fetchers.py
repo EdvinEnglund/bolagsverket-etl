@@ -5,7 +5,7 @@ import uuid
 import zipfile
 import io
 import time
-from src.config import MIN_INTERVAL
+from src.config.config import MIN_INTERVAL
 from datetime import datetime
 
 
