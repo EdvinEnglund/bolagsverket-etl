@@ -11,7 +11,7 @@ def save_report_file(report, org_no):
             print("No report to save")
             return ""
 
-        project_root = Path(__file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parent.parent.parent
         save_dir = project_root / "data" / "example-xmls"
         save_dir.mkdir(parents=True, exist_ok=True)
         save_path = save_dir / f"{org_no}_report.xml"
@@ -27,7 +27,7 @@ def save_report_file(report, org_no):
 
 # Batch processing helpers
 def load_done():
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     load_dir = project_root / DONE_FILE_DIR
     load_dir.mkdir(parents=True, exist_ok=True)
     save_file = load_dir / "done.txt"
@@ -38,7 +38,7 @@ def load_done():
         return set()
 
 def mark_done(org_nos):
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     save_dir = project_root / DONE_FILE_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     save_file = save_dir / "done.txt"
@@ -50,7 +50,7 @@ def mark_done(org_nos):
 
 
 def dump_parquet_batch(rows):
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     save_dir = project_root / PARQUET_DATA_DIR
     save_dir.mkdir(parents=True, exist_ok=True)
     filename = str(uuid.uuid4()) + ".parquet"
@@ -59,7 +59,7 @@ def dump_parquet_batch(rows):
     return
 
 def load_all_batches() -> pd.DataFrame:
-    path = Path(__file__).resolve().parent.parent / PARQUET_DATA_DIR
+    path = Path(__file__).resolve().parent.parent.parent / PARQUET_DATA_DIR
     parquet_files = sorted(Path(path).glob("*.parquet"))
 
     if not parquet_files:
@@ -70,7 +70,7 @@ def load_all_batches() -> pd.DataFrame:
     return pd.concat(dfs, ignore_index=True)
 
 def clear_tmp(directory):
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     path = project_root / directory
 
     if not path.exists():
@@ -88,8 +88,8 @@ def clear_tmp(directory):
 
 # Save helpers
 def resolve_output_path(output_path = None, output_format = "parquet"):
-    project = Path(__file__).resolve().parents[1]
-    default_path = project / DEFAULT_OUTPUT_DIR
+    project_root = Path(__file__).resolve().parent.parent.parent
+    default_path = project_root / DEFAULT_OUTPUT_DIR
     time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if output_path is None:
         return default_path / f"{time_stamp}.{output_format}"
@@ -113,7 +113,7 @@ def save_result(df, path = None, output_format = "parquet"):
 #######################################################################################
 
 def extract_orgnrs():
-    project_root = Path(__file__).resolve().parent.parent
+    project_root = Path(__file__).resolve().parent.parent.parent
     data_dir = Path("data/example_csvs")
 
     example_list = []

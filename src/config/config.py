@@ -1,9 +1,11 @@
-MIN_INTERVAL = 1
+from pathlib import Path
+LIMIT_RATE = 1.0
 MAX_RETRIES = 5
-BATCH_SIZE = 5
-DONE_FILE_DIR = "../../data/tmp/done"
-PARQUET_DATA_DIR = "../../data/tmp/parquet_batches"
-DEFAULT_OUTPUT_DIR = "../../data/output/"
+BATCH_SIZE = 10
+DONE_FILE_DIR = Path("data/tmp/done")
+PARQUET_DATA_DIR = Path("data/tmp/parquet_batches")
+DEFAULT_OUTPUT_DIR = Path("data/output")
+CONCURRENCY = 10
 
 EXAMPLE_ORGS = ["5568808686",
                "5568649478",
