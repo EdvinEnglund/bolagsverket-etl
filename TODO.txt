@@ -1,23 +1,19 @@
 #####################
 ASYNC BRANCH
+0. Specify what return codes that should lead to retry rather than != 200
+1. Move unzip to parsers(?) maybe rename get_latest_report to get_latest_report_zip
+2. Unzip in main/process_org
+3. Clean, comment
+4. Optimize configs (retries, rate_limit) to try to beat benchmark (350s)
 #####################
 
-2. Test main pipeline w. rate-limiter, Benchmark: ca 350-390s.
-=> 520s.... not good. Maybe set limit at 120/minute and implement retry logic...
+1. Create logic for token reset after 1 hour (in pipeline)
 
-3. Test if rate limit is per token => run fetcher test in two terminals
-    => if fails at the same time, no. else: PARALLELIZE
-    => not per token... sppedup is limited :(
+2. Gather ca 1000 orgs. Truncate columns where +80% of rows are missing (notebook)
 
-4. Create logic for token reset after 1 hour (in pipeline)
+3. Incorporate results from notebook into final pipeline
 
-7. Make async branch and compare runtime for ca 100-500 companies.
-
-8. Gather ca 1000 orgs. Truncate columns where +80% of rows are missing (notebook)
-
-9. Incorporate results from notebook into final pipeline
-
-9. Add revisorsberättelse fetcher, parser and pipeline
+4. Add revisorsberättelse fetcher, parser and pipeline
     - Check if possible to deduce revisorsanmärkning -> add column to main dataframe
 
-10. make ML ready preprocessing w. missing values
+5. make ML ready preprocessing w. missing values handling
