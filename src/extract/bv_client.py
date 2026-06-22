@@ -1,4 +1,3 @@
-#Hello world
 import requests
 from dotenv import load_dotenv
 import os
@@ -7,7 +6,6 @@ import zipfile
 import io
 import time
 from src.config.config import LIMIT_RATE, MAX_RETRIES
-from datetime import datetime
 import random
 import asyncio
 import aiohttp
@@ -82,8 +80,14 @@ class BVClient:
                 }
 
                 async with self.session.post(url, json=payload, headers=headers) as response:
-                    if response.status != 200:
+                    if response.status in (400, 401, 403, 404, 500):
+                        print(f"HTTP Error in _post for {payload["identitetsbeteckning"]}: {response.status}")
+                        return {}
+
+                    if response.status == 429:
+                        print(f"Rate limit exceeded in _post for {payload["identitetsbeteckning"]}. Trying again...")
                         raise Exception(f"HTTP Error in _post: {response.status}")
+
                     return await response.json()
 
             except Exception:
@@ -100,9 +104,15 @@ class BVClient:
                     "accept": "application/zip",
                     "X-Request-Id": str(uuid.uuid4())
                 }
-                async with self.session.get(url,  headers=headers) as response:
-                    if response.status != 200:
+                async with self.session.get(url, headers=headers) as response:
+                    if response.status in (400, 401, 403, 404, 500):
+                        print(f"HTTP Error in _post for: {response.status}")
+                        return None
+
+                    if response.status == 429:
+                        print(f"Rate limit exceeded in _post")
                         raise Exception(f"HTTP Error in _get: {response.status}")
+
                     response.raise_for_status()
                     return await response.read()
 

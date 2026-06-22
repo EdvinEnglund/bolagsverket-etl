@@ -1,6 +1,5 @@
 #####################
 ASYNC BRANCH
-0. Specify what return codes that should lead to retry rather than != 200
 1. Move unzip to parsers(?) maybe rename get_latest_report to get_latest_report_zip
 2. Unzip in main/process_org
 3. Clean, comment
@@ -16,4 +15,8 @@ ASYNC BRANCH
 4. Add revisorsberättelse fetcher, parser and pipeline
     - Check if possible to deduce revisorsanmärkning -> add column to main dataframe
 
-5. make ML ready preprocessing w. missing values handling
+5. Add a progress bar for main script
+
+6. Make entrypoint w. args for commandline script (look at Markovitz project)
+
+7. make ML ready preprocessing w. missing values handling
