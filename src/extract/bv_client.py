@@ -85,13 +85,12 @@ class BVClient:
                         return {}
 
                     if response.status == 429:
-                        print(f"Rate limit exceeded in _post for {payload["identitetsbeteckning"]}. Trying again...")
                         raise Exception(f"HTTP Error in _post: {response.status}")
 
                     return await response.json()
 
             except Exception:
-                print(f"Retrying _get request for org.no {payload["identitetsbeteckning"]}. Retry {i + 1} of {MAX_RETRIES}")
+                print(f"Rate limit exceeded for _post request for org.no {payload["identitetsbeteckning"]}. Retry {i + 1} of {MAX_RETRIES}")
                 await asyncio.sleep((2 ** i) + random.uniform(0, 0.3))
 
         return None
@@ -117,7 +116,7 @@ class BVClient:
                     return await response.read()
 
             except Exception:
-                print(f"Retrying _get request for URL {url}. Retry {i+1} of {MAX_RETRIES}")
+                print(f"Rate limit exceeded for _get request for URL {url}. Retry {i+1} of {MAX_RETRIES}")
                 await asyncio.sleep((2 ** i) + random.uniform(0, 0.3))
 
         return None

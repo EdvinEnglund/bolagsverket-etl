@@ -1,5 +1,6 @@
 #####################
 ASYNC BRANCH
+0. Adjust retry policy, seems to be to short as it is now. No magic numbers
 1. Move unzip to parsers(?) maybe rename get_latest_report to get_latest_report_zip
 2. Unzip in main/process_org
 3. Clean, comment
@@ -15,7 +16,7 @@ ASYNC BRANCH
 4. Add revisorsberättelse fetcher, parser and pipeline
     - Check if possible to deduce revisorsanmärkning -> add column to main dataframe
 
-5. Add a progress bar for main script
+5. Add a progress bar and ETA for main script
 
 6. Make entrypoint w. args for commandline script (look at Markovitz project)
 
