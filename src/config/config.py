@@ -1,5 +1,5 @@
 from pathlib import Path
-LIMIT_RATE = 1.0
+LIMIT_RATE = 2.0
 MAX_RETRIES = 5
 BATCH_SIZE = 10
 DONE_FILE_DIR = Path("data/tmp/done")

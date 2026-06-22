@@ -91,6 +91,7 @@ class BVClient:
                     return await response.json()
 
             except Exception:
+                print(f"Retrying _get request for org.no {payload["identitetsbeteckning"]}. Retry {i + 1} of {MAX_RETRIES}")
                 await asyncio.sleep((2 ** i) + random.uniform(0, 0.3))
 
         return None
@@ -106,17 +107,17 @@ class BVClient:
                 }
                 async with self.session.get(url, headers=headers) as response:
                     if response.status in (400, 401, 403, 404, 500):
-                        print(f"HTTP Error in _post for: {response.status}")
+                        print(f"HTTP Error in _get for: {response.status}")
                         return None
 
                     if response.status == 429:
-                        print(f"Rate limit exceeded in _post")
                         raise Exception(f"HTTP Error in _get: {response.status}")
 
                     response.raise_for_status()
                     return await response.read()
 
             except Exception:
+                print(f"Retrying _get request for URL {url}. Retry {i+1} of {MAX_RETRIES}")
                 await asyncio.sleep((2 ** i) + random.uniform(0, 0.3))
 
         return None
@@ -147,8 +148,6 @@ class BVClient:
         if len(docs) == 0:
             print(f"No documents to download for {org_no}")
             return None
-
-        ##TODO: check if date field is provided, then do max of that to ensure latest instead of [-1]
 
         latest_doc = max(
             docs,
