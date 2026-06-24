@@ -2,28 +2,11 @@ import requests
 from dotenv import load_dotenv
 import os
 import uuid
-import zipfile
-import io
 import time
 from src.config.config import LIMIT_RATE, MAX_RETRIES
 import random
 import asyncio
 import aiohttp
-
-# --- Unzip helper ---
-def unzip_documents(zip_bytes):
-    xml_files = []
-    if zip_bytes is None:
-        return xml_files
-    try:
-        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
-            for name in z.namelist():
-                if name.endswith(".xml") or name.endswith(".xhtml"):
-                    with z.open(name) as f:
-                        xml_files.append(f.read().decode("utf-8"))
-    except Exception as e:
-        print(f"Couldn't unzip documents: {e}")
-    return xml_files
 
 # --- Token generator ---
 def get_token():
@@ -141,7 +124,7 @@ class BVClient:
         return await self._get(url)
 
     # --- Composite mini pipeline method ---
-    async def get_latest_report(self, org_no):
+    async def get_latest_doc_zip(self, org_no):
         docs = await self.get_doc_list(org_no)
 
         if len(docs) == 0:
@@ -153,15 +136,10 @@ class BVClient:
             key=lambda d: d["rapporteringsperiodTom"]
         )
         doc_id = latest_doc["dokumentId"]
-        #doc_id = docs[-1]["dokumentId"]
+
         zip_bytes = await self.get_doc_zip(doc_id)
-        if not zip_bytes:
-            return None
-        documents = unzip_documents(zip_bytes)
-        if len(documents) == 0:
-            return None
-        # first index is annual report, second is revisionsberättelse (accountant statement)
-        return documents[0]
+        return zip_bytes if zip_bytes else None
+
 
     async def close(self):
         await self.session.close()

@@ -1,13 +1,11 @@
 #####################
 ASYNC BRANCH
-0. Adjust retry policy, seems to be to short as it is now. No magic numbers
-1. Move unzip to parsers(?) maybe rename get_latest_report to get_latest_report_zip
-2. Unzip in main/process_org
-3. Clean, comment
-4. Optimize configs (retries, rate_limit) to try to beat benchmark (350s)
+0. Create wrapper function for retries in bv_client
+1. Clean, comment
+2. Optimize configs (retries, rate_limit) to try to beat benchmark (350s)
 #####################
 
-1. Create logic for token reset after 1 hour (in pipeline)
+1. Create logic for token reset after 1 hour (in pipeline or maybe client?)
 
 2. Gather ca 1000 orgs. Truncate columns where +80% of rows are missing (notebook)
 
