@@ -5,26 +5,6 @@ import uuid
 import shutil
 from src.config.config import DONE_FILE_DIR, PARQUET_DATA_DIR, DEFAULT_OUTPUT_DIR
 
-def save_report_file(report, org_no):
-    try:
-        if len(report) == 0:
-            print("No report to save")
-            return ""
-
-        project_root = Path(__file__).resolve().parent.parent.parent
-        save_dir = project_root / "data" / "example-xmls"
-        save_dir.mkdir(parents=True, exist_ok=True)
-        save_path = save_dir / f"{org_no}_report.xml"
-        with open(save_path, "w", encoding="utf-8") as f:
-            f.write(report)
-
-        print(f"Saved XML report to: {save_path}")
-
-    except:
-        print("Couldn't save report")
-    return
-
-
 # Batch processing helpers
 def load_done():
     project_root = Path(__file__).resolve().parent.parent.parent
@@ -47,7 +27,6 @@ def mark_done(org_nos):
         with open(save_file, "a") as f:
             f.write(str(org_no) + "\n")
     return
-
 
 def dump_parquet_batch(rows):
     project_root = Path(__file__).resolve().parent.parent.parent
@@ -107,33 +86,6 @@ def save_result(df, path = None, output_format = "parquet"):
     print("Could not save result: format must be 'parquet' or 'csv'")
     return
 
-
-#######################################################################################
-# Utility function to extract org. numbers from csv's downloaded from bolagsfilter.se #
-#######################################################################################
-
-def extract_orgnrs():
-    project_root = Path(__file__).resolve().parent.parent.parent
-    data_dir = Path("data/example_csvs")
-
-    example_list = []
-
-    for i in range(1, 7):
-        file_path = project_root / data_dir / f"screener_sida{i}.csv"
-        df = pd.read_csv(file_path)
-
-        if "org_nr" in df.columns:
-            example_list.extend(df["org_nr"].dropna().tolist())
-
-    for i in range(len(example_list)):
-        example_list[i] = str(example_list[i])
-
-    print(example_list)
-
-
-
-if __name__ == "__main__":
-    extract_orgnrs()
 
 
 
