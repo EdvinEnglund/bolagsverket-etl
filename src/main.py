@@ -1,6 +1,7 @@
 import asyncio
 from src.extract.bv_client import BVClient, RateLimiter, get_token
 from src.utils.utils import unzip_documents
+from src.transform.document_classifier import DocumentType, identify_documents
 from src.transform.parsers import parse_report, parse_bv_data
 from src.load.load_utils import load_done, mark_done, dump_parquet_batch, load_all_batches, save_result, clear_tmp
 from src.config.config import CONCURRENCY, BATCH_SIZE, PARQUET_DATA_DIR, DONE_FILE_DIR, EXAMPLE_ORGS
@@ -16,12 +17,12 @@ async def process_org(client: BVClient, org_no: str):
         zip_bytes = await client.get_latest_doc_zip(org_no)
         if not zip_bytes: return None
 
-        # Documents index 0 = Annual report, 1 = Accountant statement
         documents = unzip_documents(zip_bytes)
         if not documents: return None
 
-        report = documents[0]
-        auditors_remark = documents[1] if len(documents) > 1 else None
+        classified = identify_documents(documents, org_no)
+        report = classified.get(DocumentType.ANNUAL_REPORT)
+        if report is None: return None
 
         bv_data = await client.get_bv_data(org_no)
         if not bv_data: return None

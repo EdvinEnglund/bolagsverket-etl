@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 from src.config.config import CONCURRENCY, EXAMPLE_ORGS
 from src.extract.bv_client import BVClient, RateLimiter, get_token
+from src.transform.document_classifier import DocumentType, identify_documents
 from src.utils.utils import unzip_documents
 
 
@@ -22,14 +23,17 @@ async def save_company_reports(client, org_no, save_dir):
         doc_id = quote(str(metadata["dokumentId"]), safe="")
         suffix = f"{period_end}_{doc_id}"
 
-        report_path = save_dir / f"{org_no}_{suffix}_report.xml"
-        report_path.write_text(documents[0], encoding="utf-8")
-        print(f"Saved XML report to: {report_path}")
+        classified = identify_documents(documents, f"{org_no} / {metadata['dokumentId']}")
+        report = classified.get(DocumentType.ANNUAL_REPORT)
+        if report is not None:
+            report_path = save_dir / f"{org_no}_{suffix}_report.xml"
+            report_path.write_text(report, encoding="utf-8")
+            print(f"Saved XML report to: {report_path}")
 
-        # The second XML/XHTML document is the auditor's statement, when present.
-        if len(documents) > 1:
+        auditor_report = classified.get(DocumentType.AUDITOR_REPORT)
+        if auditor_report is not None:
             remark_path = save_dir / f"{org_no}_AR_{suffix}_report.xml"
-            remark_path.write_text(documents[1], encoding="utf-8")
+            remark_path.write_text(auditor_report, encoding="utf-8")
             print(f"Saved auditor's XML to: {remark_path}")
 
 
