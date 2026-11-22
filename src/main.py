@@ -21,7 +21,7 @@ async def process_org(client: BVClient, org_no: str):
         if not documents: return None
 
         report = documents[0]
-        acc_statement = documents[1] if len(documents) > 1 else None
+        auditors_remark = documents[1] if len(documents) > 1 else None
 
         bv_data = await client.get_bv_data(org_no)
         if not bv_data: return None

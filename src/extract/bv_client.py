@@ -123,7 +123,14 @@ class BVClient:
         url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokument/{doc_id}"
         return await self._get(url)
 
-    # --- Composite mini pipeline method ---
+    # --- Composite document downloads ---
+    async def iter_all_doc_zips(self, org_no):
+        """Yield the document metadata and ZIP bytes for every available download."""
+        for doc in await self.get_doc_list(org_no):
+            zip_bytes = await self.get_doc_zip(doc["dokumentId"])
+            if zip_bytes:
+                yield doc, zip_bytes
+
     async def get_latest_doc_zip(self, org_no):
         docs = await self.get_doc_list(org_no)
 

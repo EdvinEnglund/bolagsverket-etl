@@ -1,21 +1,55 @@
+"""Save Bolagsverket report XMLs with python -m scripts.load_reports."""
+
+import asyncio
 from pathlib import Path
-from src.extract.bv_client import BVClient
+from urllib.parse import quote
 
-def save_report_file(report, org_no):
+from src.config.config import CONCURRENCY, EXAMPLE_ORGS
+from src.extract.bv_client import BVClient, RateLimiter, get_token
+from src.utils.utils import unzip_documents
+
+
+EXAMPLE_XML_DIR = Path(__file__).resolve().parents[1] / "data" / "example-xmls"
+
+
+async def save_company_reports(client, org_no, save_dir):
+    async for metadata, zip_bytes in client.iter_all_doc_zips(org_no):
+        documents = unzip_documents(zip_bytes)
+        if not documents:
+            continue
+
+        period_end = quote(metadata.get("rapporteringsperiodTom") or "unknown", safe="")
+        doc_id = quote(str(metadata["dokumentId"]), safe="")
+        suffix = f"{period_end}_{doc_id}"
+
+        report_path = save_dir / f"{org_no}_{suffix}_report.xml"
+        report_path.write_text(documents[0], encoding="utf-8")
+        print(f"Saved XML report to: {report_path}")
+
+        # The second XML/XHTML document is the auditor's statement, when present.
+        if len(documents) > 1:
+            remark_path = save_dir / f"{org_no}_AR_{suffix}_report.xml"
+            remark_path.write_text(documents[1], encoding="utf-8")
+            print(f"Saved auditor's XML to: {remark_path}")
+
+
+async def load_reports(org_nos, save_dir=EXAMPLE_XML_DIR):
+    save_dir = Path(save_dir)
+    org_nos = list(dict.fromkeys(str(org_no) for org_no in org_nos))
+    if not org_nos:
+        return
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+    client = BVClient(get_token(), RateLimiter())
     try:
-        if len(report) == 0:
-            print("No report to save")
-            return ""
+        # Keep the number of active company downloads bounded.
+        for start in range(0, len(org_nos), CONCURRENCY):
+            async with asyncio.TaskGroup() as group:
+                for org_no in org_nos[start:start + CONCURRENCY]:
+                    group.create_task(save_company_reports(client, org_no, save_dir))
+    finally:
+        await client.close()
 
-        project_root = Path(__file__).resolve().parent.parent
-        save_dir = project_root / "data" / "example-xmls"
-        save_dir.mkdir(parents=True, exist_ok=True)
-        save_path = save_dir / f"{org_no}_report.xml"
-        with open(save_path, "w", encoding="utf-8") as f:
-            f.write(report)
 
-        print(f"Saved XML report to: {save_path}")
-
-    except:
-        print("Couldn't save report")
-    return 0
+if __name__ == "__main__":
+    asyncio.run(load_reports(EXAMPLE_ORGS))
