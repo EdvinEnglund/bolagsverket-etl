@@ -2,7 +2,7 @@ import asyncio
 from src.extract.bv_client import BVClient, RateLimiter, get_token
 from src.utils.utils import unzip_documents
 from src.transform.document_classifier import DocumentType, identify_documents
-from src.transform.parsers import parse_report, parse_bv_data
+from src.transform.parsers import parse_bv_data, parse_flerarsoversikt, parse_report_without_flerarsoversikt
 from src.load.load_utils import load_done, mark_done, dump_parquet_batch, load_all_batches, save_result, clear_tmp
 from src.config.config import CONCURRENCY, BATCH_SIZE, PARQUET_DATA_DIR, DONE_FILE_DIR, EXAMPLE_ORGS
 import time
@@ -29,7 +29,8 @@ async def process_org(client: BVClient, org_no: str):
 
         return {
             **parse_bv_data(bv_data),
-            **parse_report(report)
+            **parse_flerarsoversikt(report)
+            ##**parse_report_without_flerarsoversikt(report)
         }
 
 async def process_batch(org_nos, client: BVClient):
