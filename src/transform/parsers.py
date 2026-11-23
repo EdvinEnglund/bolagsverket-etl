@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 OVERVIEW_HEADING = re.compile(r"^fler[åa]rs[öo]versikt\b", re.IGNORECASE)
+QUALIFIED_CONTEXT = re.compile(r"((?:PERIOD|BALANS|INGAENDE)[0-9]+)_(JP|KON)")
 HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
 OVERVIEW_LABEL_TAGS = HEADING_TAGS | {"p", "span", "td", "th", "caption"}
 AUDIT_FIELDS = {
@@ -79,6 +80,7 @@ def parse_report_without_flerarsoversikt(xml_string):
 
 def _parse_report(xml_string, *, overview_only=None):
     result = {}
+    priorities = {}
     try:
         soup = BeautifulSoup(xml_string, "xml")
 
@@ -98,7 +100,13 @@ def _parse_report(xml_string, *, overview_only=None):
 
             # remove "se-gen-base:" from columns name
             start_index = len("se-gen-base:")
-            key = f"{name[start_index::]}_{ctx.upper()}"
+            context = ctx.upper()
+            qualifier = QUALIFIED_CONTEXT.fullmatch(context)
+            priority = 0
+            if qualifier:
+                context, scope = qualifier.groups()
+                priority = 1 if scope == "JP" else 2
+            key = f"{name[start_index:]}_{context}"
 
             value_string = tag.get_text(strip=True)
 
@@ -111,7 +119,10 @@ def _parse_report(xml_string, *, overview_only=None):
                 print(f"Could not parse value '{value_string}' for key '{key}'")
                 continue
 
-            result[key] = value
+            # Prefer an unqualified fact, then the legal entity, then the group.
+            if key not in priorities or priority <= priorities[key]:
+                result[key] = value
+                priorities[key] = priority
 
     except Exception as e:
         print(f"XML parsing failed: {e}")
