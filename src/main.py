@@ -2,10 +2,11 @@ import asyncio
 from src.extract.bv_client import BVClient, RateLimiter, get_token
 from src.utils.utils import unzip_documents
 from src.transform.document_classifier import DocumentType, identify_documents
-from src.transform.parsers import parse_bv_data, parse_flerarsoversikt, parse_report_without_flerarsoversikt
+from src.transform.parsers import parse_auditor_report, parse_bv_data, parse_flerarsoversikt
 from src.load.load_utils import load_done, mark_done, dump_parquet_batch, load_all_batches, save_result, clear_tmp
 from src.config.config import CONCURRENCY, BATCH_SIZE, PARQUET_DATA_DIR, DONE_FILE_DIR, EXAMPLE_ORGS
 import time
+import pandas as pd
 
 semaphore = asyncio.Semaphore(CONCURRENCY)
 
@@ -29,8 +30,8 @@ async def process_org(client: BVClient, org_no: str):
 
         return {
             **parse_bv_data(bv_data),
-            **parse_flerarsoversikt(report)
-            ##**parse_report_without_flerarsoversikt(report)
+            **parse_flerarsoversikt(report),
+            **parse_auditor_report(classified.get(DocumentType.AUDITOR_REPORT), annual_report=report),
         }
 
 async def process_batch(org_nos, client: BVClient):
@@ -80,6 +81,7 @@ async def run_pipeline(
 if __name__ == "__main__":
     t = time.time()
     result = asyncio.run(run_pipeline(EXAMPLE_ORGS, save = False))
+    #pd.set_option('display.max_columns', None)
     print(result)
     print(f"Ran pipeline in {time.time() - t:.2f} seconds")
 

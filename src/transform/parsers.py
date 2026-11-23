@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -6,6 +7,33 @@ import pandas as pd
 OVERVIEW_HEADING = re.compile(r"^fler[åa]rs[öo]versikt\b", re.IGNORECASE)
 HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
 OVERVIEW_LABEL_TAGS = HEADING_TAGS | {"p", "span", "td", "th", "caption"}
+AUDIT_FIELDS = {
+    "UttalandeText": "audit_opinion_text",
+    "AndraKravLagForfattningUttalandenText": "audit_other_legal_opinion_text",
+    "AndraKravLagForfattningAnmarkning": "audit_remarks_text",
+    "VasentligOsakerhetsfaktorAvseendeAntagandetFortsattDrift": "audit_going_concern_text",
+    "OvrigaUpplysningar": "audit_other_disclosures_text",
+    "AndraKravLagForfattningOvrigUpplysning": "audit_other_disclosures_text",
+    "RevisionAvslutandeDatum": "audit_completion_date",
+}
+SWEDISH_MONTHS = (
+    "januari", "februari", "mars", "april", "maj", "juni",
+    "juli", "augusti", "september", "oktober", "november", "december",
+)
+
+
+def _normalize_audit_date(value):
+    """Convert ISO dates and Swedish day-month-year text to YYYY-MM-DD."""
+    try:
+        if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            return date.fromisoformat(value).isoformat()
+        match = re.fullmatch(r"([0-9]{1,2})\s+(\w+)\s+([0-9]{4})", value.casefold())
+        if match:
+            day, month, year = match.groups()
+            return date(int(year), SWEDISH_MONTHS.index(month) + 1, int(day)).isoformat()
+    except ValueError:
+        pass
+    return None
 
 
 def _find_overview_tables(soup):
@@ -91,6 +119,56 @@ def _parse_report(xml_string, *, overview_only=None):
     return result
 
 
+def _audit_fact_text(fact, continuations):
+    parts = []
+    seen = set()
+    while fact is not None:
+        for excluded in fact.find_all("ix:exclude"):
+            excluded.extract()
+        parts.append(fact.get_text(" ", strip=True))
+        next_id = fact.get("continuedAt")
+        if not next_id or next_id in seen:
+            break
+        seen.add(next_id)
+        fact = continuations.get(next_id)
+    return " ".join(part for part in parts if part)
+
+
+def parse_auditor_report(xml_string, *, annual_report=None):
+    """Extract tagged audit fields, including audit text embedded in an annual report."""
+    result = dict.fromkeys(AUDIT_FIELDS.values())
+    result["audit_parse_status"] = "missing" if xml_string is None else "unparsed"
+    source = annual_report if xml_string is None else xml_string
+    if not source:
+        return result
+
+    soup = BeautifulSoup(source, "xml")
+    continuations = {
+        tag["id"]: tag for tag in soup.find_all("ix:continuation", id=True)
+    }
+    values = {}
+    for fact in soup.find_all("ix:nonNumeric"):
+        prefix, _, concept = fact.get("name", "").partition(":")
+        if prefix != "se-ar-base" or concept not in AUDIT_FIELDS:
+            continue
+        text = _audit_fact_text(fact, continuations)
+        if text:
+            values.setdefault(AUDIT_FIELDS[concept], []).append(text)
+
+    if values:
+        completion_dates = {
+            _normalize_audit_date(text)
+            for text in values.pop("audit_completion_date", [])
+        }
+        if len(completion_dates) == 1:
+            result["audit_completion_date"] = completion_dates.pop()
+        result.update(
+            (column, "\n\n".join(dict.fromkeys(texts))) for column, texts in values.items()
+        )
+        result["audit_parse_status"] = "parsed"
+    return result
+
+
 def parse_bv_data(company_info):
     try:
         org = company_info["organisationer"][0]
@@ -129,17 +207,4 @@ def parse_bv_data(company_info):
         print(f"Could not parse org info: {e}")
         return {}
 
-
-if __name__ == "__main__":
-    pd.set_option('display.max_rows', None)
-    pd.set_option('display.max_columns', None)
-    org_nos = ["5568808686", "5568649478", "5565540035", "5566086483", "5590892542", "5564363421"]
-    #token = get_token()
-    #df = parse_reports(token, org_nos)
-    # SHow NaNs per columns
-    #print(df.isna().sum())
-
-    #print(df.head())
-
-    #print((df.notna().all()).sum())
 
