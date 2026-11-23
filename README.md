@@ -60,15 +60,17 @@ BV_SECRET=your_client_secret
 
 The `.env` file is excluded from Git through `.gitignore`. Keep API credentials local.
 
-Company registration numbers, batch size, concurrency, request rate, and paths are configured in `src/config/config.py`. Adjust `EXAMPLE_ORGS`, then run:
+The pipeline reads company registration numbers from `data/input/example_orgs.txt` by default. Put one registration number per line in either `XXXXXX-XXXX` or `XXXXXXXXXX` format.
 
 ```bash
 python -m src.main
+python -m src.main --save csv
+python -m src.main path/to/my_orgs.txt --save parquet
 ```
 
-The default run prints the result and execution time without saving a final output file (`save=False`). Temporary batch files and the record of processed companies are cleared at the end of a normal run.
+The default run prints the result and execution time. Use `--save csv` or `--save parquet` to write a timestamped file in `data/output`. Temporary batch files and the record of processed companies are cleared at the end of a normal run.
 
-To save the result, call the pipeline from Python:
+To use a custom input file and save the result, call the pipeline from Python:
 
 ```python
 import asyncio
@@ -76,22 +78,20 @@ from src.main import run_pipeline
 
 df = asyncio.run(
     run_pipeline(
-        ["5568808686", "5568649478"],
-        save=True,
-        output_path="data/output/companies.parquet",
-        file_format="parquet",
+        orgs_path="path/to/my_orgs.txt",
+        save="parquet",
     )
 )
 ```
 
-For CSV export, use `file_format="csv"` and a path ending in `.csv`. If `output_path` is omitted, the file is saved with a timestamp in `data/output/`.
+From Python, use `save="csv"` for CSV export or `save=None` to return the DataFrame without saving it.
 
 ## Project structure
 
 ```text
 src/
 ├── main.py               # Pipeline orchestration and batch processing
-├── config/config.py      # Settings and example company registration numbers
+├── config/config.py      # Pipeline settings
 ├── extract/bv_client.py  # Authentication, API client, and rate limiting
 ├── transform/parsers.py  # Company information and report field parsing
 ├── load/load_utils.py    # Parquet batches, export, and progress tracking

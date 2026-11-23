@@ -4,8 +4,9 @@ import asyncio
 from pathlib import Path
 from urllib.parse import quote
 
-from src.config.config import CONCURRENCY, EXAMPLE_ORGS
+from src.config.config import CONCURRENCY
 from src.extract.bv_client import BVClient, RateLimiter, get_token
+from src.load.org_numbers import load_org_numbers
 from src.transform.document_classifier import DocumentType, identify_documents
 from src.utils.utils import unzip_documents
 
@@ -56,4 +57,4 @@ async def load_reports(org_nos, save_dir=EXAMPLE_XML_DIR):
 
 
 if __name__ == "__main__":
-    asyncio.run(load_reports(EXAMPLE_ORGS))
+    asyncio.run(load_reports(load_org_numbers()))

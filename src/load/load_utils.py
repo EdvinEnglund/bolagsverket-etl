@@ -5,6 +5,8 @@ import uuid
 import shutil
 from src.config.config import DONE_FILE_DIR, PARQUET_DATA_DIR, DEFAULT_OUTPUT_DIR
 
+OUTPUT_FORMATS = ("csv", "parquet")
+
 # Batch processing helpers
 def load_done():
     project_root = Path(__file__).resolve().parent.parent.parent
@@ -65,26 +67,20 @@ def clear_tmp(directory):
         elif item.is_dir():
             shutil.rmtree(item)
 
-# Save helpers
-def resolve_output_path(output_path = None, output_format = "parquet"):
-    project_root = Path(__file__).resolve().parent.parent.parent
-    default_path = project_root / DEFAULT_OUTPUT_DIR
-    time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    if output_path is None:
-        return default_path / f"{time_stamp}.{output_format}"
-    return Path(output_path)
+def save_result(df: pd.DataFrame, output_format: str) -> Path:
+    if output_format not in OUTPUT_FORMATS:
+        raise ValueError(f"Output format must be one of {OUTPUT_FORMATS}")
 
-def save_result(df, path = None, output_format = "parquet"):
-    output_path = resolve_output_path(path, output_format)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    if output_format == "parquet":
-        df.to_parquet(output_path, index=False)
-        return
+    project_root = Path(__file__).resolve().parent.parent.parent
+    output_dir = project_root / DEFAULT_OUTPUT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    output_path = output_dir / f"{timestamp}.{output_format}"
     if output_format == "csv":
         df.to_csv(output_path, index=False)
-        return
-    print("Could not save result: format must be 'parquet' or 'csv'")
-    return
+    else:
+        df.to_parquet(output_path, index=False)
+    return output_path
 
 
 

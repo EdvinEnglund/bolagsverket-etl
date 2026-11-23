@@ -1,12 +1,15 @@
+import argparse
 import asyncio
 from src.extract.bv_client import BVClient, RateLimiter, get_token
 from src.utils.utils import unzip_documents
 from src.transform.document_classifier import DocumentType, identify_documents
 from src.transform.parsers import parse_auditor_report, parse_bv_data, parse_flerarsoversikt
-from src.load.load_utils import load_done, mark_done, dump_parquet_batch, load_all_batches, save_result, clear_tmp
-from src.config.config import CONCURRENCY, BATCH_SIZE, PARQUET_DATA_DIR, DONE_FILE_DIR, EXAMPLE_ORGS
+from src.load.load_utils import (
+    OUTPUT_FORMATS, load_done, mark_done, dump_parquet_batch, load_all_batches, save_result, clear_tmp,
+)
+from src.load.org_numbers import load_org_numbers
+from src.config.config import CONCURRENCY, BATCH_SIZE, PARQUET_DATA_DIR, DONE_FILE_DIR
 import time
-import pandas as pd
 
 semaphore = asyncio.Semaphore(CONCURRENCY)
 
@@ -41,11 +44,18 @@ async def process_batch(org_nos, client: BVClient):
     return [r for r in results if r is not None]
 
 async def run_pipeline(
-        org_nos,
-        save = False,
-        output_path = None,
-        file_format = "parquet"
-    ):
+    org_nos=None,
+    save: str | None = None,
+    *,
+    orgs_path=None,
+):
+    if save is not None and save not in OUTPUT_FORMATS:
+        raise ValueError(f"save must be None or one of {OUTPUT_FORMATS}")
+
+    if org_nos is None:
+        org_nos = load_org_numbers(orgs_path)
+    elif orgs_path is not None:
+        raise ValueError("Provide either org_nos or orgs_path")
 
     token = get_token()
     limiter = RateLimiter()
@@ -70,8 +80,9 @@ async def run_pipeline(
     # Load and clear /tmp data
     df = load_all_batches()
 
-    if save:
-        save_result(df, output_path, file_format)
+    if save is not None:
+        output_path = save_result(df, save)
+        print(f"Saved results to {output_path}")
 
     clear_tmp(PARQUET_DATA_DIR)
     clear_tmp(DONE_FILE_DIR)
@@ -79,9 +90,20 @@ async def run_pipeline(
     return df
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the Bolagsverket pipeline.")
+    parser.add_argument(
+        "orgs_path",
+        nargs="?",
+        help="Text file with one registration number per line (default: data/input/example_orgs.txt)",
+    )
+    parser.add_argument(
+        "--save",
+        choices=OUTPUT_FORMATS,
+        help="Save a timestamped file in data/output.",
+    )
+    args = parser.parse_args()
     t = time.time()
-    result = asyncio.run(run_pipeline(EXAMPLE_ORGS, save = False))
-    #pd.set_option('display.max_columns', None)
+    result = asyncio.run(run_pipeline(orgs_path=args.orgs_path, save=args.save))
     print(result)
     print(f"Ran pipeline in {time.time() - t:.2f} seconds")
 
