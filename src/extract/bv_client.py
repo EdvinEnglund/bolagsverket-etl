@@ -1,12 +1,26 @@
+import asyncio
+import logging
+import os
+import random
+import time
+import uuid
+from email.utils import parsedate_to_datetime
+
+import aiohttp
 import requests
 from dotenv import load_dotenv
-import os
-import uuid
-import time
-from src.config.config import LIMIT_RATE, MAX_RETRIES
-import random
-import asyncio
-import aiohttp
+
+from src.config.config import (
+    BV_MAX_ATTEMPTS,
+    BV_REQUESTS_PER_SECOND,
+    BV_THROTTLE_BACKOFF_SECONDS,
+)
+
+
+logger = logging.getLogger(__name__)
+API_BASE_URL = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1"
+RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
+
 
 # --- Token generator ---
 def get_token():
@@ -26,102 +40,106 @@ def get_token():
     response = response.json()
     return response["access_token"]
 
-# --- Rate limiter ---
 class RateLimiter:
-    def __init__(self, rate_per_sec: float = LIMIT_RATE):
-        self.delay = 1.0 / rate_per_sec
-        self.lock = asyncio.Lock()
-        self.last_call = 0
+    def __init__(self, rate_per_sec: float = BV_REQUESTS_PER_SECOND):
+        self._interval = 1.0 / rate_per_sec
+        self._lock = asyncio.Lock()
+        self._next_request = 0.0
+
+    def defer(self, seconds: float):
+        """Apply a cooldown to every request sharing this limiter."""
+        self._next_request = max(self._next_request, time.monotonic() + seconds)
 
     async def wait(self):
-        async with self.lock:
-            now = time.time()
-            wait = self.delay - (now - self.last_call)
+        async with self._lock:
+            while (delay := self._next_request - time.monotonic()) > 0:
+                await asyncio.sleep(delay)
+            self._next_request = time.monotonic() + self._interval
 
-            if wait > 0:
-                await asyncio.sleep(wait)
 
-            self.last_call = time.time()
+def retry_after_seconds(value: str | None) -> float | None:
+    if value is None:
+        return None
+    if value.isascii() and value.isdecimal():
+        return int(value)
+    try:
+        retry_at = parsedate_to_datetime(value)
+        if retry_at.tzinfo is not None:
+            return max(0.0, retry_at.timestamp() - time.time())
+    except (ValueError, OverflowError):
+        pass
+    return None
 
-# --- API Client ---
+
 class BVClient:
     def __init__(self, token: str, limiter: RateLimiter):
         self.token = token
         self.limiter = limiter
         self.session = aiohttp.ClientSession()
 
-    # --- Core Requests ---
-    async def _post(self, url: str, payload, retries = MAX_RETRIES):
-        for i in range(retries):
+    async def _request(self, method, path, *, payload=None):
+        accept = "application/zip" if method == "GET" else "application/json"
+
+        for attempt in range(1, BV_MAX_ATTEMPTS + 1):
+            await self.limiter.wait()
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Accept": accept,
+                "X-Request-Id": str(uuid.uuid4()),
+            }
+            delay = 2 ** (attempt - 1) + random.uniform(0, 0.3)
+            shared_cooldown = False
+
             try:
-                await self.limiter.wait()
-                headers = {
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                    "accept": "application/json",
-                    "X-Request-Id": str(uuid.uuid4())
-                }
+                async with self.session.request(
+                    method, f"{API_BASE_URL}/{path}", json=payload, headers=headers
+                ) as response:
+                    status = response.status
+                    if 200 <= status < 300:
+                        return await response.read() if method == "GET" else await response.json()
 
-                async with self.session.post(url, json=payload, headers=headers) as response:
-                    if response.status in (400, 401, 403, 404, 500):
-                        print(f"HTTP Error in _post for {payload["identitetsbeteckning"]}: {response.status}")
-                        return {}
-
-                    if response.status == 429:
-                        raise Exception(f"HTTP Error in _post: {response.status}")
-
-                    return await response.json()
-
-            except Exception:
-                print(f"Rate limit exceeded for _post request for org.no {payload["identitetsbeteckning"]}. Retry {i + 1} of {MAX_RETRIES}")
-                await asyncio.sleep((2 ** i) + random.uniform(0, 0.3))
-
-        return None
-
-    async def _get(self, url: str, retries = MAX_RETRIES):
-        for i in range(retries):
-            try:
-                await self.limiter.wait()
-                headers = {
-                    "Authorization": f"Bearer {self.token}",
-                    "accept": "application/zip",
-                    "X-Request-Id": str(uuid.uuid4())
-                }
-                async with self.session.get(url, headers=headers) as response:
-                    if response.status in (400, 401, 403, 404, 500):
-                        print(f"HTTP Error in _get for: {response.status}")
+                    failure = f"HTTP {status}"
+                    if status not in RETRYABLE_STATUSES:
+                        logger.warning("%s %s failed with %s", method, path, failure)
                         return None
 
-                    if response.status == 429:
-                        raise Exception(f"HTTP Error in _get: {response.status}")
+                    retry_after = retry_after_seconds(response.headers.get("Retry-After"))
+                    if status == 429:
+                        delay *= BV_THROTTLE_BACKOFF_SECONDS
+                    if retry_after is not None:
+                        delay = max(delay, retry_after)
 
-                    response.raise_for_status()
-                    return await response.read()
+                    shared_cooldown = status == 429 or (status == 503 and retry_after is not None)
+                    if shared_cooldown:
+                        self.limiter.defer(delay)
+            except (aiohttp.ClientConnectionError, aiohttp.ClientPayloadError, TimeoutError) as error:
+                failure = f"{type(error).__name__}: {error}"
+            except (aiohttp.ClientError, ValueError) as error:
+                logger.warning("%s %s failed with %s: %s", method, path, type(error).__name__, error)
+                return None
 
-            except Exception:
-                print(f"Rate limit exceeded for _get request for URL {url}. Retry {i+1} of {MAX_RETRIES}")
-                await asyncio.sleep((2 ** i) + random.uniform(0, 0.3))
+            if attempt == BV_MAX_ATTEMPTS:
+                logger.warning("%s %s failed after %s attempts (%s)", method, path, attempt, failure)
+                return None
 
-        return None
-
-    # --- API methods ---
+            logger.warning(
+                "%s %s attempt %s/%s failed (%s), retrying in at least %.1f seconds",
+                method, path, attempt, BV_MAX_ATTEMPTS, failure, delay,
+            )
+            if not shared_cooldown:
+                await asyncio.sleep(delay)
 
     async def get_bv_data(self, org_no):
-        url = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/organisationer"
-        return await self._post(url, {"identitetsbeteckning": org_no})
+        return await self._request("POST", "organisationer", payload={"identitetsbeteckning": org_no})
 
     async def get_doc_list(self, org_no):
-        url = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokumentlista"
-        response = await self._post(url, {"identitetsbeteckning": org_no})
-
-        if not response:
-            return []
-
-        return response.get("dokument", [])
+        response = await self._request(
+            "POST", "dokumentlista", payload={"identitetsbeteckning": org_no}
+        )
+        return response.get("dokument", []) if response else []
 
     async def get_doc_zip(self, doc_id):
-        url = f"https://gw.api.bolagsverket.se/vardefulla-datamangder/v1/dokument/{doc_id}"
-        return await self._get(url)
+        return await self._request("GET", f"dokument/{doc_id}")
 
     # --- Composite document downloads ---
     async def iter_all_doc_zips(self, org_no):
@@ -147,10 +165,5 @@ class BVClient:
         zip_bytes = await self.get_doc_zip(doc_id)
         return zip_bytes if zip_bytes else None
 
-
     async def close(self):
         await self.session.close()
-
-
-
-
