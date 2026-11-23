@@ -5,7 +5,7 @@ ASYNC BRANCH
 2. Optimize configs (retries, rate_limit) to try to beat benchmark (350s)
 #####################
 
-1. Create logic for token reset after 1 hour (in pipeline or maybe client?)
+1. [Done] Renew tokens in the API client
 
 2. Gather ca 1000 orgs. Truncate columns where +80% of rows are missing (notebook)
 

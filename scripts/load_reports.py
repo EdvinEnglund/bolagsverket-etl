@@ -5,10 +5,9 @@ from pathlib import Path
 from urllib.parse import quote
 
 from src.config.config import CONCURRENCY
-from src.extract.bv_client import BVClient, RateLimiter, get_token
+from src.extract.bv_client import BVClient, unzip_documents
 from src.load.org_numbers import load_org_numbers
 from src.transform.document_classifier import DocumentType, identify_documents
-from src.utils.utils import unzip_documents
 
 
 EXAMPLE_XML_DIR = Path(__file__).resolve().parents[1] / "data" / "example-xmls"
@@ -45,7 +44,7 @@ async def load_reports(org_nos, save_dir=EXAMPLE_XML_DIR):
         return
 
     save_dir.mkdir(parents=True, exist_ok=True)
-    client = BVClient(get_token(), RateLimiter())
+    client = BVClient()
     try:
         # Keep the number of active company downloads bounded.
         for start in range(0, len(org_nos), CONCURRENCY):

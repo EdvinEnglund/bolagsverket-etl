@@ -12,7 +12,7 @@ The project covers API integration, asynchronous data collection, structured doc
 
 ## Current functionality
 
-1. **Authentication:** obtains an OAuth2 token using API credentials from environment variables.
+1. **Authentication:** obtains an OAuth2 token using API credentials from environment variables. The client reads the lifetime from each token response’s `expires_in` field and renews early using the margin configured in `src/config/config.py` (60 seconds by default).
 2. **Data collection:** retrieves the document list for each company, selects the document with the latest reporting period end date, and downloads its ZIP archive. Company information is fetched separately.
 3. **Transformation:** extracts XML/XHTML files and reads numeric `ix:nonFraction` fields from the annual report. These are combined with company registration number, name, registration date, postal code, business description, and up to four SNI industry classification codes.
 4. **Storage:** writes intermediate results to temporary Parquet files and combines them into a Pandas DataFrame. The final result can be exported as Parquet or CSV.
@@ -92,10 +92,9 @@ From Python, use `save="csv"` for CSV export or `save=None` to return the DataFr
 src/
 ├── main.py               # Pipeline orchestration and batch processing
 ├── config/config.py      # Pipeline settings
-├── extract/bv_client.py  # Authentication, API client, and rate limiting
+├── extract/bv_client.py  # Authentication, API client, rate limiting, and ZIP extraction
 ├── transform/parsers.py  # Company information and report field parsing
-├── load/load_utils.py    # Parquet batches, export, and progress tracking
-└── utils/utils.py        # Document archive extraction
+└── load/load_utils.py    # Parquet batches, export, and progress tracking
 TODO.txt                  # Development notes
 ```
 
@@ -103,7 +102,7 @@ TODO.txt                  # Development notes
 
 The following areas remain, based on the development plan and limitations of the current implementation:
 
-- **More robust execution:** add automatic token renewal for longer runs, shared retry logic, clearer error handling, and reliable HTTP session cleanup when execution is interrupted. Improve resuming at the company level and handle empty results.
+- **More robust execution:** improve retry and error handling. Improve resuming at the company level and handle empty results.
 - **Report data validation:** identify the correct documents within archives and improve iXBRL parsing so numeric values and their context are represented correctly.
 - **Column selection through visual analysis in a notebook:** collect a sample of approximately 1,000 companies and use exploratory visual analysis in a notebook to identify and retain columns relevant to further analysis. Examine data coverage, missing-value patterns, and value distributions; evaluate removing columns with more than 80% missing values. Incorporate the resulting column selection and filtering rules into the pipeline.
 - **Auditor's reports:** add support for identifying and parsing auditor's reports, and investigate whether auditor remarks can be represented in a separate column.

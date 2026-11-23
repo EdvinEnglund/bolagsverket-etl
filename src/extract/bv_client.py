@@ -1,9 +1,11 @@
 import asyncio
+import io
 import logging
 import os
 import random
 import time
 import uuid
+import zipfile
 from email.utils import parsedate_to_datetime
 
 import aiohttp
@@ -14,6 +16,7 @@ from src.config.config import (
     BV_MAX_ATTEMPTS,
     BV_REQUESTS_PER_SECOND,
     BV_THROTTLE_BACKOFF_SECONDS,
+    BV_TOKEN_RENEWAL_MARGIN_SECONDS,
 )
 
 
@@ -22,8 +25,24 @@ API_BASE_URL = "https://gw.api.bolagsverket.se/vardefulla-datamangder/v1"
 RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
 
 
+def unzip_documents(zip_bytes):
+    xml_files = []
+    if zip_bytes is None:
+        return xml_files
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+            for name in z.namelist():
+                if name.endswith(".xml") or name.endswith(".xhtml"):
+                    with z.open(name) as f:
+                        xml_files.append(f.read().decode("utf-8"))
+    except Exception as e:
+        print(f"Couldn't unzip documents: {e}")
+
+    return xml_files if len(xml_files) > 0 else None
+
+
 # --- Token generator ---
-def get_token():
+def _fetch_token() -> tuple[str, int]:
     load_dotenv()
     url = "https://portal.api.bolagsverket.se/oauth2/token"
     data = {
@@ -32,13 +51,18 @@ def get_token():
         "client_secret": os.getenv("BV_SECRET"),
         "scope": "vardefulla-datamangder:read vardefulla-datamangder:ping"
     }
-    response = requests.post(url, data=data)
+    response = requests.post(url, data=data, timeout=30)
+    response.raise_for_status()
+    payload = response.json()
+    lifetime = int(payload["expires_in"])
+    if lifetime <= 0:
+        raise ValueError("Token endpoint returned a non-positive lifetime")
+    return payload["access_token"], lifetime
 
-    if response.status_code != 200:
-        print(f"Http Error: Get token status: {response.status_code}")
 
-    response = response.json()
-    return response["access_token"]
+def get_token() -> str:
+    return _fetch_token()[0]
+
 
 class RateLimiter:
     def __init__(self, rate_per_sec: float = BV_REQUESTS_PER_SECOND):
@@ -72,18 +96,40 @@ def retry_after_seconds(value: str | None) -> float | None:
 
 
 class BVClient:
-    def __init__(self, token: str, limiter: RateLimiter):
-        self.token = token
-        self.limiter = limiter
+    def __init__(self, *, limiter: RateLimiter | None = None):
+        self.token = None
+        self.limiter = limiter if limiter is not None else RateLimiter()
+        self._token_lock = asyncio.Lock()
+        self._renew_at = 0
         self.session = aiohttp.ClientSession()
+
+    @staticmethod
+    def _renewal_deadline(lifetime):
+        margin = BV_TOKEN_RENEWAL_MARGIN_SECONDS
+        if not 0 <= margin < lifetime:
+            raise ValueError(
+                f"BV_TOKEN_RENEWAL_MARGIN_SECONDS ({margin}) must be nonnegative "
+                f"and smaller than the token lifetime ({lifetime} seconds)"
+            )
+        return time.monotonic() + lifetime - margin
+
+    async def _request_token(self):
+        async with self._token_lock:
+            await self.limiter.wait()
+            if time.monotonic() >= self._renew_at:
+                token, lifetime = await asyncio.to_thread(_fetch_token)
+                self._renew_at = self._renewal_deadline(lifetime)
+                self.token = token
+            return self.token
 
     async def _request(self, method, path, *, payload=None):
         accept = "application/zip" if method == "GET" else "application/json"
 
+        retried_auth = False
         for attempt in range(1, BV_MAX_ATTEMPTS + 1):
-            await self.limiter.wait()
+            token = await self._request_token()
             headers = {
-                "Authorization": f"Bearer {self.token}",
+                "Authorization": f"Bearer {token}",
                 "Accept": accept,
                 "X-Request-Id": str(uuid.uuid4()),
             }
@@ -98,6 +144,11 @@ class BVClient:
                     if 200 <= status < 300:
                         return await response.read() if method == "GET" else await response.json()
 
+                    if status == 401 and not retried_auth and attempt < BV_MAX_ATTEMPTS:
+                        if self.token == token:
+                            self._renew_at = 0
+                        retried_auth = True
+                        continue
                     failure = f"HTTP {status}"
                     if status not in RETRYABLE_STATUSES:
                         logger.warning("%s %s failed with %s", method, path, failure)
