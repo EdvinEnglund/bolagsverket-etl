@@ -1,21 +1,11 @@
-#####################
-ASYNC BRANCH
-0. Create wrapper function for retries in bv_client
-1. Clean, comment
-2. Optimize configs (retries, rate_limit) to try to beat benchmark (350s)
-#####################
+1. Parse and use tkr/mkr/sek etc.
 
-1. [Done] Renew tokens in the API client
+2. Decide on fields
 
-2. Gather ca 1000 orgs. Truncate columns where +80% of rows are missing (notebook)
+3. make two pipelines -> df(flerårsöversikt) and timeseries(rest)
 
-3. Incorporate results from notebook into final pipeline
+4. Add a progress bar and ETA for main script
 
-4. Add revisorsberättelse fetcher, parser and pipeline
-    - Check if possible to deduce revisorsanmärkning -> add column to main dataframe
+5. make clean command line tool w. args.
 
-5. Add a progress bar and ETA for main script
-
-6. Make entrypoint w. args for commandline script (look at Markovitz project)
-
-7. make ML ready preprocessing w. missing values handling
+6. make ML ready preprocessing w. missing values handling
